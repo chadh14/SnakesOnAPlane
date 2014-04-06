@@ -1,12 +1,12 @@
 package com.notredev.snakes;
 
-public class CellOutOfBoundsException extends RuntimeException {
+public class PositionOutOfBoundsException extends RuntimeException {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
-	CellOutOfBoundsException(String error) {
+	PositionOutOfBoundsException(String error) {
 		super(error);
 	}
 }
