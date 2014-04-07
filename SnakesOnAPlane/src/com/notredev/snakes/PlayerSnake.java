@@ -25,16 +25,24 @@ public class PlayerSnake extends Snake {
 			// If multiple directions are pressed, continue in the current direction
 		}
 		else if (state.Up()) {
-			direction = Direction.UP;
+			if (!direction.equals(Direction.DOWN)) {
+				direction = Direction.UP;
+			}
 		}
 		else if (state.Down()) {
-			direction = Direction.DOWN;
+			if (!direction.equals(Direction.UP)) {
+				direction = Direction.DOWN;
+			}
 		}
 		else if (state.Left()) {
-			direction = Direction.LEFT;
+			if (!direction.equals(Direction.RIGHT)) {
+				direction = Direction.LEFT;
+			}
 		}
 		else if (state.Right()) {
-			direction = Direction.RIGHT;
+			if (!direction.equals(Direction.LEFT)) {
+				direction = Direction.RIGHT;
+			}
 		}
 		// If no buttons are pressed, coninue in the current direction
 	}
