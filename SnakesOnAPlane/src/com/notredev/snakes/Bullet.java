@@ -1,23 +1,35 @@
 package com.notredev.snakes;
 
+import java.util.Collection;
+import java.util.HashSet;
+
 public class Bullet extends Actor {
 	
-	Direction direction;
+	private Position position;
+	private Direction direction;
 	
-	public Bullet(GameBoardCell startCell, Direction direction) {
+	public Bullet(Position position, Direction direction) {
 		super(ActorType.BULLET);
-		addCellBack(startCell);
-		
-		direction = this.direction;
+		this.position = position;
+		this.direction = direction;
 	}
 
 	@Override
+	public Collection<Position> getPositions() {
+		//TODO: Creating a new hash map each time isn't very efficient
+		HashSet<Position> positions = new HashSet<Position>();
+		positions.add(position);
+		return positions;
+	}
+	
+	@Override
 	public void update() {
-		GameBoardCell nextCell = gameBoard.getNextCell(cells.getFirst(), direction);
-		if (nextCell != null) { // If the next cell is not out of bounds
-			addCellFront(nextCell);
+		try {
+			position = playingSurface.getNextPosition(position, direction);
 		}
-		removeCellBack();
+		catch (PositionOutOfBoundsException e) {
+			//TODO: Handle this
+		}
 	}
 	
 	

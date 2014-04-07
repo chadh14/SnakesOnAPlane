@@ -4,7 +4,6 @@ import java.util.Random;
 
 import com.amazon.device.gamecontroller.GameController;
 import com.amazon.device.gamecontroller.GameController.PlayerNumberNotFoundException;
-import com.firebase.client.Firebase;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -26,7 +25,8 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
     private Thread thread = null;
     private SurfaceHolder surfaceHolder;
     private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Firebase mFirebaseRoot;
+
+    private PlayingSurface playingSurface = PlayingSurface.Instance();
         
     // Store an X,Y out-of-boundary defaults for each of the 4 players
     int x[] = new int[] {-1, -1, -1, -1};
@@ -44,8 +44,9 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
     public SnakeSurfaceView(Context context) {
         super(context);
         surfaceHolder = getHolder();
-        // Create a reference to a Firebase location
-        mFirebaseRoot = new Firebase("https://radiant-fire-9333.firebaseio.com/SnakesOnAPlane");
+        
+        playingSurface.setRows(43);
+        playingSurface.setColumns(80);
     }
 
     /*
@@ -76,13 +77,9 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
     
     public void update(){
         //Update the actors
-    	for(Actor actor : GameBoard.Instance().listOfActors)
-    	{
+    	for(Actor actor : playingSurface.getActors()) {
     		actor.update();
     	}
-    	
-        //Update the gameboard
-    	GameBoard.Instance().updateOccupants();
     	
         // Iterate through all players
         for (int n = 0; n < GameController.MAX_PLAYERS; n++) {
@@ -124,92 +121,43 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
                 y[n] += gameController
                                 .isButtonPressed(GameController.BUTTON_DPAD_UP) ? -5
                                 : 0;
-                final String xVal = Integer.toString(x[n]);
-                final String yVal = Integer.toString(y[n]);
-                //mFirebaseRoot.child(xVal + ":" + yVal).setValue(true);
             }
         }
     }
     
-    public void draw()
-    {
-    	if (surfaceHolder.getSurface().isValid()) 
-    	{
+    public void resolveCollisions() {
+    	CollisionMap collisionMap = new CollisionMap();
+    	for (Actor actor: playingSurface.getActors()) {
+    		collisionMap.addActor(actor);
+    	}
+    	playingSurface.removeActors(collisionMap.resolveAllCollisions());
+    }
+    
+    public void draw() {
+    	if (surfaceHolder.getSurface().isValid()) {
 	        Canvas canvas = surfaceHolder.lockCanvas();
 	        canvas.drawColor(Color.WHITE);
-	        canvasWidth = canvas.getWidth();
-	        canvasHeight = canvas.getHeight();
 	        
 	        paint.setStyle(Paint.Style.STROKE);
 	        paint.setStrokeWidth(15);
 	        
 	        paint.setColor(Color.BLACK);
-	        int xPos = 0;
-	        int yPos = 0;
-	        int gridWidth = canvasWidth/GameBoard.Instance().MAX_COLUMNS;
-	        int gridHeight = canvasHeight/GameBoard.Instance().MAX_ROWS;
-	        for(int i=0; i<GameBoard.Instance().gameBoardCells.length; i++)
-	        {
-	        	int posX = (i % GameBoard.Instance().MAX_COLUMNS) * gridWidth + gridWidth/2;
-	        	int posY = ((int)i/GameBoard.Instance().MAX_COLUMNS) * gridHeight + gridHeight/2;
-	        	if(GameBoard.Instance().gameBoardCells[i].getActors().size() > 0)
-	        	{
-	        		Actor actor = GameBoard.Instance().gameBoardCells[i].getActors().getFirst();
-		        	switch(actor.getType())
-		        	{
-		        	case SNAKE:
-		        		Snake snake = (Snake)actor;
-		        		switch(snake.getPlayerNumber())
-		        		{
-		        		case 0:
-		        			paint.setColor(Color.GREEN);
-		        			break;
-		        		case 1:
-		        			paint.setColor(Color.BLUE);
-		        			break;
-		        		case 2:
-		        			paint.setColor(Color.YELLOW);
-		        			break;
-		        		case 3:
-		        			paint.setColor(Color.MAGENTA);
-		        			break;
-		        		case 4:
-		        			paint.setColor(Color.CYAN);
-		        			break;
-		        		}
-		        		break;
-		        	case OBSTACLE:
-		        		paint.setColor(Color.GRAY);
-		        		break;
-		        	case BULLET:
-		        		paint.setColor(Color.BLACK);
-		        		break;
-		        	case FOOD:
-		        		paint.setColor(Color.RED);
-		        		break;
-		        	default:
-		        		paint.setColor(Color.WHITE);
-		        		break;
-		        	}
-		        	canvas.drawPoint(posX, posY, paint);
-	        	}
-	        	else
-	        	{
-	        		paint.setColor(Color.BLACK);
+	        for (Actor actor : playingSurface.getActors()) {
+	        	for (Position position : actor.getPositions()) {
+	        		int posX = position.getColumn()*(canvas.getWidth()/playingSurface.getColumns());
+	        		int posY = position.getRow()*(canvas.getHeight()/playingSurface.getRows());
+	        		setPaintColor(actor);
+	        		canvas.drawPoint(posX, posY, paint);
 	        	}
 	        }
 	        
-	        paint.setStyle(Paint.Style.STROKE);
-	        paint.setStrokeWidth(8);
-	        
-	        
-	        for (int n = 0; n < GameController.MAX_PLAYERS; n++) {
+	        /*for (int n = 0; n < GameController.MAX_PLAYERS; n++) {
 	
 		        // Draw a spot for that player
 		        paint.setColor(colors[n]);
 		        canvas.drawPoint(x[n], y[n], paint);
 		        canvas.drawCircle(x[n], y[n], 20, paint);
-	        }
+	        }*/
 	        
 	        // Now pass over to the GPU for rendering.
 	        GameController.startFrame();
@@ -217,25 +165,74 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
 	    }
     }
 
+    private void setPaintColor(Actor actor) {
+    	switch(actor.getType())
+    	{
+    	case SNAKE:
+    		Snake snake = (Snake)actor;
+    		switch(snake.getPlayerNumber())
+    		{
+    		case 0:
+    			paint.setColor(Color.GREEN);
+    			break;
+    		case 1:
+    			paint.setColor(Color.BLUE);
+    			break;
+    		case 2:
+    			paint.setColor(Color.YELLOW);
+    			break;
+    		case 3:
+    			paint.setColor(Color.MAGENTA);
+    			break;
+    		case 4:
+    			paint.setColor(Color.CYAN);
+    			break;
+    		}
+    		break;
+    	case OBSTACLE:
+    		paint.setColor(Color.GRAY);
+    		break;
+    	case BULLET:
+    		paint.setColor(Color.BLACK);
+    		break;
+    	case FOOD:
+    		paint.setColor(Color.RED);
+    		break;
+    	default:
+    		paint.setColor(Color.WHITE);
+    		break;
+    	}
+    }
+    
     /*
      * This runs
      */
     @Override
     public void run() {
-    	Random r = new Random();
-    	for(int i=0; i< GameController.MAX_PLAYERS;i++)
-    	{
-    		GameBoard.Instance().getListOfActors().add(new PlayerSnake(GameBoard.Instance().getCell(i*5, i*5), i));
+    	// Create player snakes
+    	for(int i=0; i< GameController.MAX_PLAYERS; i++) {
+    		playingSurface.addActor(new PlayerSnake(new Position(i*5, i*5), i));
     	}
     	
-    	for(int i=0; i< 20;i++)
-    	{
-	    	GameBoard.Instance().getListOfActors().add(new Food(GameBoard.Instance().getCell(r.nextInt(GameBoard.Instance().MAX_ROWS), r.nextInt(GameBoard.Instance().MAX_COLUMNS))));
+    	// Create obstacles
+    	for (int i=0; i<10; i++) {
+    		Log.e("obst", ""+i);
+    		int obstacleSize = 2; //TODO: Randomize this, getAdjacentFreePositions isn't efficient
+    		Obstacle randomObstacle = new Obstacle(playingSurface.getAdjacentFreePositions(obstacleSize));
+    		playingSurface.addActor(randomObstacle);
+    	}
+    	//TODO: Create border obstacle
+    	
+    	// Create food
+    	for(int i=0; i< 20;i++) {
+    		Position randomPosition = playingSurface.getAdjacentFreePositions(1).get(0);
+    		playingSurface.addActor(new Food(randomPosition));
     	}
     	
-        while(running){
+        while(running) {
         	//TODO: menu logic goes around the below 2 call
         	update();
+        	resolveCollisions();
         	draw();
         	
             // Wait the equivalent of one frame at 60fps

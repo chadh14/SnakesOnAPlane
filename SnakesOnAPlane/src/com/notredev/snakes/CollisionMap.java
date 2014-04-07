@@ -29,38 +29,65 @@ public class CollisionMap {
 	 * Returns a collection of actors to delete
 	 */
 	private Collection<Actor> resolveCollision(Position position) {
-		HashSet<Actor> actorsToRemove = new HashSet<Actor>();
-		
+		HashSet<Actor> actorsToRemove = new HashSet<Actor>();	
+		//TODO: Check that the position is in the map
 		HashMap<ActorType, HashSet<Actor>> actorsByType = map.get(position);
-		if (actorsByType.containsKey(ActorType.FOOD)) {
-			if (actorsByType.containsKey(ActorType.BULLET)) {
-				// The bullet destroys all food
-				for (Actor foodActor : actorsByType.get(ActorType.FOOD)) {
-					actorsToRemove.add(foodActor);
+		
+		if (actorsByType.containsKey(ActorType.SNAKE) && actorsByType.containsKey(ActorType.FOOD)) {	
+			for(Actor actor : actorsByType.get(ActorType.SNAKE)) {
+				// A snake head eats the food
+				if (((Snake)actor).getHeadPosition().equals(position)) {
+					((Snake)actor).setGrowOnNextMove(true);
 				}
 			}
-			
-			if (actorsByType.containsKey(ActorType.SNAKE)) {
-				for(Actor snakeActor : actorsByType.get(ActorType.SNAKE)) {
-					// A snake head eats the food
-					if (((Snake)snakeActor).getHeadPosition().equals(position)) {
-						((Snake)snakeActor).setGrowOnNextMove(true);
-					}
-				}
-				// All food items are destroyed
-				for (Actor foodActor : actorsByType.get(ActorType.FOOD)) {
-					actorsToRemove.add(foodActor);
+			// All food items are destroyed
+			for (Actor actor : actorsByType.get(ActorType.FOOD)) {
+				actorsToRemove.add(actor);
+			}
+		}
+		
+		// Check if a snake collided with another snake
+		if (actorsByType.containsKey(ActorType.SNAKE) && actorsByType.get(ActorType.SNAKE).size() > 1) {
+			for (Actor actor : actorsByType.get(ActorType.SNAKE)) {
+				// If the snake's head is in this position, it should be destroyed
+				// Collisions of two snake bodies (non-heads) should never happen
+				if( ((Snake)actor).getHeadPosition().equals(position)) {
+					actorsToRemove.add(actor);
 				}
 			}
 		}
 		
-		// Check for multiple snake collisions
+		if (actorsByType.containsKey(ActorType.SNAKE) && actorsByType.containsKey(ActorType.BULLET)) {
+			for (Actor actor : actorsByType.get(ActorType.SNAKE)) {
+				// A bullet to the head is fatal
+				if( ((Snake)actor).getHeadPosition().equals(position)) {
+					actorsToRemove.add(actor);
+				}
+				// A bullet to the body, splits the snake and creates an obstacle
+				else {
+					((Snake)actor).split(position);
+				}
+			}
+			// Bullets do not get destroyed when they hit snakes
+		}
 		
-		// Check for bullet and snake collisions
+		if (actorsByType.containsKey(ActorType.BULLET) && actorsByType.containsKey(ActorType.FOOD)) {
+			// The bullet destroys all food
+			for (Actor foodActor : actorsByType.get(ActorType.FOOD)) {
+				actorsToRemove.add(foodActor);
+			}
+		}
 		
-		// Check for obstacle and snake collisions
-		
-		
+		if (actorsByType.containsKey(ActorType.OBSTACLE)) {
+			// Anything colliding with an obstacle that is not an obstacle should be destroyed
+			for (ActorType actorType : actorsByType.keySet()) {
+				if (!actorType.equals(ActorType.OBSTACLE)) {
+					for (Actor actor: actorsByType.get(actorType)) {
+						actorsToRemove.add(actor);
+					}
+				}
+			}
+		}
 		
 		return actorsToRemove;
 		

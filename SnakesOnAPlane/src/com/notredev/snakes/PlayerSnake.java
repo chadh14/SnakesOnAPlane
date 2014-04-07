@@ -4,39 +4,39 @@ public class PlayerSnake extends Snake {
 
 	InputManager inputManager = InputManager.Instance();
 	
-	public PlayerSnake(GameBoardCell snakeHeadGameBoardCell, int playerNumber) {
-		super(snakeHeadGameBoardCell, playerNumber);
+	public PlayerSnake(Position startPosition, int playerNumber) {
+		super(startPosition, playerNumber);
 	}
 
 	@Override
 	public void update() {
-		InputState state = inputManager.GetInputForController(getPlayerNumber());
+		InputState state = inputManager.GetInputForController(playerNumber);
 		try {
-			move(getDirection(state));
+			setDirection(state);
+			move();
 		}
-		catch (CellOutOfBoundsException e) {
+		catch (PositionOutOfBoundsException e) {
 			//TODO: Handle this
 		}
 	}
 
-	private Direction getDirection(InputState state) {
+	private void setDirection(InputState state) {
 		if (!(state.Up() ^ state.Down() ^ state.Left() ^ state.Right())) {
 			// If multiple directions are pressed, continue in the current direction
-			return currentDirection; 
 		}
-		if (state.Up()) {
-			return Direction.UP;
+		else if (state.Up()) {
+			direction = Direction.UP;
 		}
-		if (state.Down()) {
-			return Direction.DOWN;
+		else if (state.Down()) {
+			direction = Direction.DOWN;
 		}
-		if (state.Left()) {
-			return Direction.LEFT;
+		else if (state.Left()) {
+			direction = Direction.LEFT;
 		}
-		if (state.Right()) {
-			return Direction.RIGHT;
+		else if (state.Right()) {
+			direction = Direction.RIGHT;
 		}
-		return currentDirection; // Default to the direction the snake is already moving
+		// If no buttons are pressed, coninue in the current direction
 	}
 	
 }
