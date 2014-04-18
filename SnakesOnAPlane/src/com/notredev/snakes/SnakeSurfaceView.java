@@ -19,7 +19,7 @@ import android.view.SurfaceView;
  */
 public class SnakeSurfaceView extends SurfaceView implements Runnable {
 
-	private static final String TAG = "IM SICK AND TIRED OF THESE MUTHA FUCKIN SNAKES ON THIS MUTHA FUCKIN PLANES";
+	private static final String TAG = "Snakes on a plane";
     private volatile boolean running = false;
 
     private Thread thread = null;
@@ -27,6 +27,8 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
     private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private PlayingSurface playingSurface = PlayingSurface.Instance();
+    
+    private Random random = new Random();
         
     // Store an X,Y out-of-boundary defaults for each of the 4 players
     int x[] = new int[] {-1, -1, -1, -1};
@@ -209,6 +211,10 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
      */
     @Override
     public void run() {
+    	// Create obstacle around the border of the playing surface
+    	Obstacle border = new Obstacle(playingSurface.getBorderPositions());
+    	//playingSurface.addActor(border);
+    	
     	// Create player snakes
     	for(int i=0; i< GameController.MAX_PLAYERS; i++) {
     		playingSurface.addActor(new PlayerSnake(new Position(i*5, i*5), i));
@@ -217,11 +223,10 @@ public class SnakeSurfaceView extends SurfaceView implements Runnable {
     	// Create obstacles
     	for (int i=0; i<10; i++) {
     		Log.e("obst", ""+i);
-    		int obstacleSize = 2; //TODO: Randomize this, getAdjacentFreePositions isn't efficient
+    		int obstacleSize = random.nextInt(8); //Random obstacle size 0 < x < 8
     		Obstacle randomObstacle = new Obstacle(playingSurface.getAdjacentFreePositions(obstacleSize));
     		playingSurface.addActor(randomObstacle);
     	}
-    	//TODO: Create border obstacle
     	
     	// Create food
     	for(int i=0; i< 20;i++) {

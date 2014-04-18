@@ -89,7 +89,40 @@ public class PlayingSurface {
 		return nextPosition;
 	}
 	
+	private HashSet<Position> getFreePositions() {
+		HashSet<Position> freePositions = new HashSet<Position>();
+		// Add all rows and columns to the map
+		for (int row=0; row < rows; row++) {
+			for (int column=0; column < columns; column++) {
+				freePositions.add(new Position(row, column));
+			}
+		}
+		
+		// Remove positions occupied by actors
+		for (Actor actor : actors) {
+			freePositions.removeAll(actor.getPositions());
+		}
+		return freePositions;
+	}
+	
+	public HashSet<Position> getBorderPositions() {
+		HashSet<Position> border = new HashSet<Position>();
+		
+		for (int column=0; column < columns; column++) {
+			border.add(new Position(0, column)); // Top boarder
+			border.add(new Position(rows, column)); // Bottom boarder
+		}
+		
+		for (int row=0; row < rows; row++) {
+			border.add(new Position(row, 0)); // Left boarder
+			border.add(new Position(row, columns)); // Right boarder
+		}
+		
+		return border;
+	}
+	
 	public List<Position> getAdjacentFreePositions(int numberOfPositions) {
+		HashSet<Position> freePositions = getFreePositions();
 		LinkedList<Position> positions;
 		
 		do {
@@ -100,40 +133,18 @@ public class PlayingSurface {
 	    		Direction randomDirection = Direction.values()[random.nextInt(4)];
 	    		try {
 	    			Position nextPosition = getNextPosition(positions.getLast(), randomDirection);
-	    			while(positions.contains(nextPosition)) {
-	    				nextPosition = getNextPosition(positions.getLast(), randomDirection);
+	    			if (!positions.contains(nextPosition)) { // Don't duplicate positions already in the list
+	    				positions.add(nextPosition);
 	    			}
-	    			positions.add(nextPosition);
 	    		}
 	    		catch (PositionOutOfBoundsException e) {
-	    			continue;
+	    			//TODO: It is possible that the only available positions are already in our list or are out of bounds
+	    			// This will cause an infinite loop here
+	    			continue; 
 	    		}
 	    	}
-		} while(!arePositionsFree(positions));
+		} while(!freePositions.containsAll(positions));
 		return positions;  	
-	}
-	
-	public boolean isPositionFree(Position position) {
-		for (Actor actor : actors) {
-			if (actor.getPositions().contains(position)) {
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	/**
-	 * Returns true if all the positions are empty, false otherwise
-	 * @param positions
-	 * @return
-	 */
-	public boolean arePositionsFree(Collection<Position> positions) {
-		for (Position position : positions) {
-			if (!isPositionFree(position)) {
-				return false;
-			}
-		}
-		return true;
 	}
 	
 	/**
